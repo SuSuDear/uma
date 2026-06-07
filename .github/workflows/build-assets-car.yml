@@ -1,0 +1,56 @@
+name: Build Assets.car
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "images/**"
+      - "scripts/**"
+      - ".github/workflows/build-assets-car.yml"
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: |
+          xcodebuild -version
+          xcrun actool --version || true
+
+      - name: Generate xcassets
+        run: |
+          python3 scripts/make_xcassets.py
+
+      - name: List generated xcassets
+        run: |
+          find GeneratedAssets.xcassets -maxdepth 3 -type f
+
+      - name: Compile Assets.car
+        run: |
+          mkdir -p output
+
+          xcrun actool GeneratedAssets.xcassets \
+            --compile output \
+            --platform iphoneos \
+            --target-device iphone \
+            --target-device ipad \
+            --minimum-deployment-target 13.0 \
+            --output-format human-readable-text
+
+      - name: Check output
+        run: |
+          ls -lah output
+          test -f output/Assets.car
+
+      - name: Upload Assets.car
+        uses: actions/upload-artifact@v4
+        with:
+          name: Assets.car
+          path: output/Assets.car
